@@ -2,60 +2,78 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Perfil Sensorial - Evaluación TO</title>
-    
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         body {
             background-color: #F3F4F6;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex; flex-direction: column; align-items: center;
-            padding: 20px; padding-top: 100px; margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            padding-top: 130px;
+            margin: 0;
+            box-sizing: border-box;
         }
+
+        *, *::before, *::after { box-sizing: border-box; }
 
         /* BARRA SUPERIOR */
         .barra-superior {
             position: fixed; top: 0; left: 0; width: 100%;
             background-color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             display: flex; justify-content: center; align-items: center;
-            padding: 15px 20px; z-index: 1000; gap: 20px;
+            padding: max(12px, env(safe-area-inset-top)) 16px 12px 16px;
+            z-index: 1000; gap: 12px; flex-wrap: wrap;
         }
+
         .barra-superior label { font-size: 16px; font-weight: bold; color: #2c3e50; }
+
         .barra-superior input {
             font-size: 16px; padding: 8px 15px; border: 2px solid #D1D5DB;
-            border-radius: 8px; outline: none; transition: 0.2s;
+            border-radius: 8px; outline: none; transition: 0.2s; min-height: 44px;
         }
-        .barra-superior input[type="text"] { width: 250px; }
-        .barra-superior input[type="number"] { width: 80px; text-align: center; }
+
+        .barra-superior input[type="text"] { width: 220px; max-width: 100%; }
+        .barra-superior input[type="number"] { width: 90px; text-align: center; }
         .barra-superior input:focus { border-color: #FF71A4; }
-        
+
         .btn-guardar {
-            padding: 12px 30px; font-size: 16px; font-weight: bold;
+            padding: 12px 24px; font-size: 16px; font-weight: bold;
             color: white; background-color: #FF71A4; border: none;
             border-radius: 30px; cursor: pointer;
             box-shadow: 0 4px 6px rgba(255, 113, 164, 0.3); transition: 0.2s;
+            min-height: 44px; white-space: nowrap;
         }
-        .btn-guardar:hover { background-color: #E05B8D; transform: scale(1.05); }
+
+        .btn-guardar:hover { background-color: #E05B8D; transform: scale(1.03); }
 
         /* DISEÑO DE LAS HOJAS */
         .contenedor-hoja {
             position: relative; margin-bottom: 20px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             border-radius: 8px; background-color: white;
-            max-width: 900px; width: 100%;
+            max-width: 900px; width: 100%; overflow: hidden;
         }
+
         .imagen-pdf { width: 100%; display: block; border-radius: 8px; }
         .capa-interactiva { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        
+
         /* BOTONES E INTERFAZ */
         input[type="radio"] {
             appearance: none; -webkit-appearance: none;
             width: 1.8vw; max-width: 22px; height: 1.8vw; max-height: 22px;
             border: 2px solid #D1D5DB; border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(255, 255, 255, 0.85);
             cursor: pointer; position: absolute;
             transform: translate(-50%, -50%); transition: all 0.2s ease; margin: 0;
         }
+
         input[type="radio"]:hover { background-color: #FCE7F3; }
         input[type="radio"]:checked { border: 6px solid #FF71A4; background-color: white; }
 
@@ -63,6 +81,7 @@
             position: absolute; font-size: 1.6vw; font-weight: bold;
             color: #2c3e50; transform: translate(-50%, -50%); pointer-events: none;
         }
+
         @media (min-width: 900px) { .texto-resultado { font-size: 16px; } }
 
         .marco-resaltado {
@@ -71,64 +90,87 @@
             border-radius: 6px; pointer-events: none; box-sizing: border-box;
         }
 
-        /* --- NUEVO: ESTILOS DEL REPORTE FINAL --- */
+        /* REPORTE WEB */
         #seccion-reporte {
-            display: none; /* Oculto hasta que se calcule */
-            width: 100%; max-width: 900px; background: white;
+            display: none; width: 100%; max-width: 900px; background: white;
             padding: 40px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             border-radius: 8px; margin-top: 20px; box-sizing: border-box;
         }
-        .titulo-reporte { color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 20px;}
-        .tabla-reporte { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
-        .tabla-reporte th, .tabla-reporte td { padding: 12px; text-align: left; border: 1px solid #ddd; }
-        .tabla-reporte td:first-child, .tabla-reporte td:nth-child(3) { text-align: center; font-weight: bold; }
+
+        .titulo-reporte { color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 20px; }
         
+        .tabla-reporte { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
+        .tabla-reporte th, .tabla-reporte td { padding: 12px; text-align: left; border: 1px solid #ddd; vertical-align: top; }
+        .tabla-reporte td:first-child, .tabla-reporte td:nth-child(3) { text-align: center; font-weight: bold; }
+
         .bg-azul { background-color: #3498db; color: white; }
         .bg-naranja { background-color: #e67e22; color: white; }
         .bg-morado { background-color: #9b59b6; color: white; }
         .bg-rojo { background-color: #e74c3c; color: white; }
 
-        .btn-imprimir {
-            display: block; width: 100%; padding: 15px; font-size: 18px;
-            background-color: #2c3e50; color: white; border: none; border-radius: 8px;
-            cursor: pointer; margin-top: 20px; font-weight: bold; transition: 0.2s;
-        }
-        .btn-imprimir:hover { background-color: #1a252f; }
+        .subtitulo-cuadrante { font-size: 18px; font-weight: 700; margin: 30px 0 10px 0; color: #2c3e50; }
 
-        /* Estilos para cuando Cami presione Ctrl+P (Imprimir PDF nativo) */
-        @media print {
-            .barra-superior, .btn-imprimir { display: none !important; }
-            body { padding: 0; background-color: white; }
-            .contenedor-hoja, #seccion-reporte { box-shadow: none; page-break-after: always; }
+        .btn-descargar {
+            display: block; width: 100%; padding: 15px; font-size: 18px;
+            background-color: #2c3e50; color: white; border: none;
+            border-radius: 8px; cursor: pointer; margin-top: 20px; font-weight: bold; transition: 0.2s;
+        }
+        .btn-descargar:hover { background-color: #1a252f; }
+        .btn-descargar:disabled { background-color: #7f8c8d; cursor: not-allowed; }
+
+        @media (max-width: 768px) {
+            body { padding-top: 180px; padding-left: 12px; padding-right: 12px; }
+            .barra-superior { justify-content: center; align-items: stretch; gap: 10px; }
+            .barra-superior label { font-size: 14px; }
+            .barra-superior input[type="text"], .barra-superior input[type="number"] { width: 100%; max-width: 100%; }
+            .btn-guardar { width: 100%; }
+            #seccion-reporte { padding: 20px; }
+            .tabla-reporte { font-size: 12px; }
+            .tabla-reporte th, .tabla-reporte td { padding: 8px; }
+        }
+
+        @media (max-width: 480px) {
+            body { padding-top: 220px; }
+            input[type="radio"] { width: 16px; height: 16px; }
         }
     </style>
 </head>
 <body>
 
     <div class="barra-superior">
-        <label>Paciente:</label>
+        <label for="nombre_paciente">Paciente:</label>
         <input type="text" id="nombre_paciente" placeholder="Nombre completo">
-        <label>Edad:</label>
+
+        <label for="edad_paciente">Edad:</label>
         <input type="number" id="edad_paciente" min="11" max="120" placeholder="Años">
+
         <button class="btn-guardar" onclick="procesarResultados()">Calcular Perfil Completo</button>
     </div>
 
     <div id="documento-original">
-        <div class="contenedor-hoja"><img src="images/pagina_1.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_1"></div></div>
-        <div class="contenedor-hoja"><img src="images/pagina_2.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_2"></div></div>
-        <div class="contenedor-hoja"><img src="images/pagina_3.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_3"></div></div>
-        <div class="contenedor-hoja"><img src="images/pagina_4.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_4"></div></div>
-        <div class="contenedor-hoja"><img src="images/pagina_5.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_5"></div></div>
-        <div class="contenedor-hoja"><img src="images/pagina_6.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_6"></div></div>
-        <div class="contenedor-hoja"><img src="images/pagina_7.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_7"></div></div>
-        <div class="contenedor-hoja"><img src="images/pagina_8.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_8"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_1.jpg" id="img_pag_1" class="imagen-pdf" crossorigin="anonymous"><div class="capa-interactiva" id="capa_pag_1"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_2.jpg" id="img_pag_2" class="imagen-pdf" crossorigin="anonymous"><div class="capa-interactiva" id="capa_pag_2"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_3.jpg" id="img_pag_3" class="imagen-pdf" crossorigin="anonymous"><div class="capa-interactiva" id="capa_pag_3"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_4.jpg" id="img_pag_4" class="imagen-pdf" crossorigin="anonymous"><div class="capa-interactiva" id="capa_pag_4"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_5.jpg" id="img_pag_5" class="imagen-pdf" crossorigin="anonymous"><div class="capa-interactiva" id="capa_pag_5"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_6.jpg" id="img_pag_6" class="imagen-pdf" crossorigin="anonymous"><div class="capa-interactiva" id="capa_pag_6"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_7.jpg" id="img_pag_7" class="imagen-pdf" crossorigin="anonymous"><div class="capa-interactiva" id="capa_pag_7"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_8.jpg" id="img_pag_8" class="imagen-pdf" crossorigin="anonymous"><div class="capa-interactiva" id="capa_pag_8"></div></div>
     </div>
 
     <div id="seccion-reporte">
         <h2 class="titulo-reporte">Reporte de Análisis Cuantitativo y Cualitativo</h2>
-        <p style="font-size: 16px;"><strong>Paciente:</strong> <span id="rep_nombre"></span> &nbsp;|&nbsp; <strong>Edad:</strong> <span id="rep_edad"></span> años</p>
+        <p style="font-size: 16px;">
+            <strong>Paciente:</strong> <span id="rep_nombre"></span>
+            &nbsp;|&nbsp;
+            <strong>Edad:</strong> <span id="rep_edad"></span> años
+        </p>
+
         <div id="contenido-tablas"></div>
-        <button class="btn-imprimir" onclick="window.print()">🖨️ Guardar Reporte como PDF</button>
+
+        <button id="btn-descargar-pdf" class="btn-descargar" onclick="descargarPDF()">
+            📄 Descargar reporte en PDF
+        </button>
     </div>
 
     <script src="templates/coordenadas.js"></script>
@@ -225,37 +267,64 @@
             "Evitación Sensorial": [1, 5, 11, 18, 24, 26, 29, 35, 38, 43, 46, 49, 53, 56, 57]
         };
 
-        // INYECTAR BOTONES DE SELECCIÓN
+        const encabezadosRespuestas = {
+            "Bajo Registro": "Respuestas Bajo Registro",
+            "Búsqueda Sensorial": "Respuestas Búsqueda Sensorial",
+            "Sensibilidad Sensorial": "Respuestas Sensibilidad Sensorial",
+            "Evitación Sensorial": "Respuestas Evitación Sensorial"
+        };
+
+        // Inyectar botones de selección inicial
         if (typeof coordenadasGlobales !== 'undefined') {
             for (const [pag_id, datosPagina] of Object.entries(coordenadasGlobales)) {
                 const capa = document.getElementById(pag_id);
                 if (!capa) continue;
+
                 for (const [casilla, puntos] of Object.entries(datosPagina)) {
                     puntos.forEach((coord, index) => {
                         const radioBtn = document.createElement('input');
-                        radioBtn.type = 'radio'; radioBtn.name = casilla; radioBtn.value = index + 1;
-                        radioBtn.style.left = coord[0] + '%'; radioBtn.style.top = coord[1] + '%';
+                        radioBtn.type = 'radio';
+                        radioBtn.name = casilla;
+                        radioBtn.value = index + 1;
+                        radioBtn.style.left = coord[0] + '%';
+                        radioBtn.style.top = coord[1] + '%';
                         capa.appendChild(radioBtn);
                     });
                 }
             }
         }
 
+        function obtenerFechaActual() {
+            const hoy = new Date();
+            const dia = String(hoy.getDate()).padStart(2, '0');
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+            const anio = hoy.getFullYear();
+            return `${dia}-${mes}-${anio}`;
+        }
+
+        function limpiarNombreArchivo(texto) {
+            return texto.trim().replace(/\s+/g, '_').replace(/[^\w\-áéíóúÁÉÍÓÚñÑ]/g, '').replace(/_+/g, '_');
+        }
+
         function procesarResultados() {
             const nombre = document.getElementById('nombre_paciente').value || "Paciente Anónimo";
             const edadInput = document.getElementById('edad_paciente').value;
-            
+
             if (!edadInput || isNaN(edadInput)) {
                 alert("Por favor, ingresa la edad del paciente en la barra superior antes de calcular.");
                 return;
             }
-            
+
             const edad = parseInt(edadInput);
             let rangoActivo = "";
+
             if (edad >= 11 && edad <= 17) rangoActivo = "11_17";
             else if (edad >= 18 && edad <= 64) rangoActivo = "18_64";
             else if (edad >= 65) rangoActivo = "65_mas";
-            else { alert("La edad ingresada está fuera de los rangos (11 a 65+)."); return; }
+            else {
+                alert("La edad ingresada está fuera de los rangos (11 a 65+).");
+                return;
+            }
 
             const resultados = {};
             document.querySelectorAll('input[type="radio"]:checked').forEach(input => {
@@ -263,35 +332,46 @@
                 resultados[numItem] = parseInt(input.value);
             });
 
-            // 1. ACTUALIZAR LAS IMÁGENES (PAG 6 y 7)
+            // Actualizar vista web hojas 6 y 7
             const capaPag6 = document.getElementById('capa_pag_6');
             const capaPag7 = document.getElementById('capa_pag_7');
-            if(capaPag6 && capaPag7) {
+
+            if (capaPag6 && capaPag7) {
                 capaPag6.querySelectorAll('.texto-resultado').forEach(t => t.remove());
                 capaPag7.querySelectorAll('.texto-resultado, .marco-resaltado').forEach(el => el.remove());
 
-                const totalesCalc = { "total_br": "", "total_bs": "", "total_ss": "", "total_evs": "" };
+                const totalesCalc = { total_br: "", total_bs: "", total_ss: "", total_evs: "" };
 
                 for (const [id_texto, coords] of Object.entries(coordsPagina6)) {
                     let valor = "";
+
                     if (!isNaN(id_texto)) {
                         valor = resultados[id_texto] !== undefined ? resultados[id_texto] : "";
                     } else {
-                        let mapId = id_texto === "total_br" ? "Bajo Registro" : 
-                                    id_texto === "total_bs" ? "Búsqueda Sensorial" : 
-                                    id_texto === "total_ss" ? "Sensibilidad Sensorial" : "Evitación Sensorial";
-                        let sumaTotal = 0; let respondidos = 0;
-                        cuadrantes[mapId].forEach(item => {
-                            if (resultados[item]) { sumaTotal += resultados[item]; respondidos++; }
+                        let nombreCuadrante = id_texto === "total_br" ? "Bajo Registro" :
+                                              id_texto === "total_bs" ? "Búsqueda Sensorial" :
+                                              id_texto === "total_ss" ? "Sensibilidad Sensorial" : "Evitación Sensorial";
+
+                        let sumaTotal = 0;
+                        let respondidos = 0;
+
+                        cuadrantes[nombreCuadrante].forEach(item => {
+                            if (resultados[item] !== undefined) {
+                                sumaTotal += resultados[item];
+                                respondidos++;
+                            }
                         });
+
                         valor = respondidos > 0 ? sumaTotal : "";
                         totalesCalc[id_texto] = valor;
                     }
 
                     if (valor !== "") {
                         const spanObj = document.createElement('span');
-                        spanObj.className = 'texto-resultado'; spanObj.textContent = valor;
-                        spanObj.style.left = coords.x + '%'; spanObj.style.top = coords.y + '%';
+                        spanObj.className = 'texto-resultado';
+                        spanObj.textContent = valor;
+                        spanObj.style.left = coords.x + '%';
+                        spanObj.style.top = coords.y + '%';
                         capaPag6.appendChild(spanObj);
                     }
                 }
@@ -299,28 +379,33 @@
                 const m = marcosEdad[rangoActivo];
                 const divMarco = document.createElement('div');
                 divMarco.className = 'marco-resaltado';
-                divMarco.style.left = m.x + '%'; divMarco.style.top = m.y + '%';
-                divMarco.style.width = m.w + '%'; divMarco.style.height = m.h + '%';
+                divMarco.style.left = m.x + '%';
+                divMarco.style.top = m.y + '%';
+                divMarco.style.width = m.w + '%';
+                divMarco.style.height = m.h + '%';
                 capaPag7.appendChild(divMarco);
 
                 const pt = totalesEdad[rangoActivo];
-                const mapeo = { "br": "total_br", "bs": "total_bs", "ss": "total_ss", "evs": "total_evs" };
+                const mapeo = { br: "total_br", bs: "total_bs", ss: "total_ss", evs: "total_evs" };
+
                 for (const [cuad, c] of Object.entries(pt)) {
                     if (totalesCalc[mapeo[cuad]] !== "") {
                         const spanObj = document.createElement('span');
-                        spanObj.className = 'texto-resultado'; spanObj.textContent = totalesCalc[mapeo[cuad]];
-                        spanObj.style.left = c.x + '%'; spanObj.style.top = c.y + '%';
+                        spanObj.className = 'texto-resultado';
+                        spanObj.textContent = totalesCalc[mapeo[cuad]];
+                        spanObj.style.left = c.x + '%';
+                        spanObj.style.top = c.y + '%';
                         capaPag7.appendChild(spanObj);
                     }
                 }
             }
 
-            // 2. GENERAR EL REPORTE HTML AL FINAL DE LA PÁGINA
+            // Generar tablas de reporte en la web
             document.getElementById('rep_nombre').textContent = nombre;
             document.getElementById('rep_edad').textContent = edad;
-            
+
             const contenedorTablas = document.getElementById('contenido-tablas');
-            contenedorTablas.innerHTML = ''; // Limpiar reportes anteriores
+            contenedorTablas.innerHTML = '';
 
             const estilosCuadrantes = {
                 "Bajo Registro": "bg-azul",
@@ -331,11 +416,12 @@
 
             for (const [nombreCuadrante, items] of Object.entries(cuadrantes)) {
                 let htmlTabla = `
+                    <div class="subtitulo-cuadrante">${encabezadosRespuestas[nombreCuadrante]}</div>
                     <table class="tabla-reporte">
                         <thead>
                             <tr>
                                 <th class="${estilosCuadrantes[nombreCuadrante]}" style="width:10%; text-align:center;">Ítem</th>
-                                <th class="${estilosCuadrantes[nombreCuadrante]}" style="width:60%;">ción de la Conducta</th>
+                                <th class="${estilosCuadrantes[nombreCuadrante]}" style="width:60%;">${encabezadosRespuestas[nombreCuadrante]}</th>
                                 <th class="${estilosCuadrantes[nombreCuadrante]}" style="width:10%; text-align:center;">Ptje</th>
                                 <th class="${estilosCuadrantes[nombreCuadrante]}" style="width:20%;">Respuesta</th>
                             </tr>
@@ -344,10 +430,10 @@
                 `;
 
                 items.forEach(item => {
-                    const puntaje = resultados[item] ? resultados[item] : "-";
-                    const textoRespuesta = resultados[item] ? respuestasTexto[resultados[item]] : "Sin responder";
+                    const puntaje = resultados[item] !== undefined ? resultados[item] : "-";
+                    const textoRespuesta = resultados[item] !== undefined ? respuestasTexto[resultados[item]] : "Sin responder";
                     const pregunta = textoPreguntas[item] || "(Pregunta no ingresada)";
-                    
+
                     htmlTabla += `
                         <tr>
                             <td>${item}</td>
@@ -362,17 +448,181 @@
                 contenedorTablas.innerHTML += htmlTabla;
             }
 
-            // Mostrar la sección y hacer scroll hacia abajo automáticamente
             const seccionReporte = document.getElementById('seccion-reporte');
             seccionReporte.style.display = 'block';
-            
             setTimeout(() => {
-                seccionReporte.scrollIntoView({ behavior: 'smooth' });
+                seccionReporte.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 300);
-            
-            // Cambiar dinámicamente el título de la página web para que al imprimir guarde con ese nombre por defecto
-            let nombreLimpio = nombre.trim().replace(/\s+/g, '_');
-            document.title = `${nombreLimpio}_${edad}`;
+
+            const nombreLimpio = limpiarNombreArchivo(nombre);
+            document.title = `${nombreLimpio}_${edad}_${obtenerFechaActual()}`;
+        }
+
+        // ==========================================
+        // DESCARGAR PDF
+        // ==========================================
+        async function descargarPDF() {
+            const btn = document.getElementById('btn-descargar-pdf');
+            btn.disabled = true;
+            btn.textContent = 'Generando PDF completo...';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'pt', 'a4');
+                const pW = doc.internal.pageSize.getWidth();
+                const pH = doc.internal.pageSize.getHeight();
+
+                const nombre = document.getElementById('nombre_paciente').value || "Paciente Anónimo";
+                const edad = parseInt(document.getElementById('edad_paciente').value) || 0;
+
+                // Capturar resultados
+                const resultados = {};
+                document.querySelectorAll('input[type="radio"]:checked').forEach(input => {
+                    resultados[input.name.replace('casilla_', '')] = parseInt(input.value);
+                });
+
+                // Función auxiliar para convertir la imagen del HTML a base64
+                const getImgBase64 = (id) => {
+                    const img = document.getElementById(id);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    return canvas.toDataURL('image/jpeg', 0.95);
+                };
+
+                // DIBUJAR HOJAS 1 A 8
+                for (let i = 1; i <= 8; i++) {
+                    if (i > 1) doc.addPage();
+                    
+                    doc.addImage(getImgBase64(`img_pag_${i}`), 'JPEG', 0, 0, pW, pH);
+
+                    // Escribir datos del paciente (Página 2)
+                    if (i === 2) {
+                        doc.setFontSize(12); doc.setTextColor(44, 62, 80);
+                        doc.text(nombre, pW * 0.20, pH * 0.17);
+                        doc.text(`${edad} años`, pW * 0.70, pH * 0.17);
+                    }
+
+                    // --- PINTAR CÍRCULOS A COLOR EN EL PDF (Páginas 3 a 5) ---
+                    if (i >= 3 && i <= 5) {
+                        // Configuramos el color para replicar exactamente los botones web
+                        doc.setDrawColor(255, 113, 164); // Borde coral/rosa
+                        doc.setFillColor(255, 255, 255); // Relleno blanco
+                        doc.setLineWidth(3);             // Grosor del borde (simula el CSS '6px solid')
+                        
+                        const capaData = coordenadasGlobales[`capa_pag_${i}`];
+                        if (capaData) {
+                            for (const [casilla, puntos] of Object.entries(capaData)) {
+                                const val = resultados[casilla.replace('casilla_', '')];
+                                if (val) {
+                                    const p = puntos[val - 1];
+                                    // 'FD' significa "Fill and Draw", rellenará de blanco y dibujará un borde rosa grueso
+                                    doc.circle((p[0] / 100) * pW, (p[1] / 100) * pH, 5, 'FD');
+                                }
+                            }
+                        }
+                        // Restauramos el grosor de línea a default para el resto del documento
+                        doc.setLineWidth(1);
+                    }
+
+                    // Pintar cálculos matemáticos (Página 6)
+                    if (i === 6) {
+                        doc.setFontSize(11); doc.setTextColor(44, 62, 80); // Color azul elegante igual que la web
+                        for (const [id_texto, coords] of Object.entries(coordsPagina6)) {
+                            let val = "";
+                            if (!isNaN(id_texto)) {
+                                val = resultados[id_texto] !== undefined ? resultados[id_texto].toString() : "";
+                            } else {
+                                let nombreC = id_texto === "total_br" ? "Bajo Registro" :
+                                              id_texto === "total_bs" ? "Búsqueda Sensorial" :
+                                              id_texto === "total_ss" ? "Sensibilidad Sensorial" : "Evitación Sensorial";
+                                let suma = 0, resp = 0;
+                                cuadrantes[nombreC].forEach(item => {
+                                    if (resultados[item]) { suma += resultados[item]; resp++; }
+                                });
+                                val = resp > 0 ? suma.toString() : "";
+                            }
+                            if (val !== "") doc.text(val, (coords.x / 100) * pW - 4, (coords.y / 100) * pH + 4);
+                        }
+                    }
+
+                    // Pintar marco y resultados por edad (Página 7)
+                    if (i === 7) {
+                        let rango = (edad >= 11 && edad <= 17) ? "11_17" : (edad >= 65) ? "65_mas" : "18_64";
+                        
+                        // Dibujar marco rojo/rosa
+                        const m = marcosEdad[rango];
+                        doc.setDrawColor(255, 113, 164); doc.setLineWidth(2);
+                        doc.rect((m.x / 100) * pW, (m.y / 100) * pH, (m.w / 100) * pW, (m.h / 100) * pH);
+
+                        // Dibujar números
+                        doc.setTextColor(44, 62, 80); // Color azul elegante
+                        const pt = totalesEdad[rango];
+                        const mapeo = { br: "Bajo Registro", bs: "Búsqueda Sensorial", ss: "Sensibilidad Sensorial", evs: "Evitación Sensorial" };
+                        
+                        for (const [cuad, c] of Object.entries(pt)) {
+                            let suma = 0, resp = 0;
+                            cuadrantes[mapeo[cuad]].forEach(item => {
+                                if (resultados[item]) { suma += resultados[item]; resp++; }
+                            });
+                            if (resp > 0) doc.text(suma.toString(), (c.x / 100) * pW - 4, (c.y / 100) * pH + 4);
+                        }
+                    }
+                }
+
+                // DIBUJAR PÁGINAS DE REPORTE (AutoTable)
+                doc.addPage();
+                doc.setFontSize(18); doc.setTextColor(44, 62, 80);
+                doc.text("Reporte de Análisis Cuantitativo y Cualitativo", 40, 50);
+                doc.setFontSize(11);
+                doc.text(`Paciente: ${nombre} | Edad: ${edad} años | Fecha: ${obtenerFechaActual()}`, 40, 75);
+
+                const coloresTabla = {
+                    "Bajo Registro": [52, 152, 219],
+                    "Búsqueda Sensorial": [230, 126, 34],
+                    "Sensibilidad Sensorial": [155, 89, 182],
+                    "Evitación Sensorial": [231, 76, 60]
+                };
+
+                let currentY = 100;
+                for (const [nombreCuadrante, items] of Object.entries(cuadrantes)) {
+                    const datosTabla = items.map(item => [
+                        item,
+                        textoPreguntas[item] || "(Pregunta no ingresada)",
+                        resultados[item] || "-",
+                        respuestasTexto[resultados[item]] || "Sin responder"
+                    ]);
+
+                    doc.autoTable({
+                        startY: currentY,
+                        head: [[`Ítem`, encabezadosRespuestas[nombreCuadrante], `Ptje`, `Respuesta`]],
+                        body: datosTabla,
+                        headStyles: { fillColor: coloresTabla[nombreCuadrante] },
+                        styles: { fontSize: 9, cellPadding: 4 },
+                        columnStyles: {
+                            0: { cellWidth: 40, halign: 'center', fontStyle: 'bold' },
+                            1: { cellWidth: 330 },
+                            2: { cellWidth: 40, halign: 'center', fontStyle: 'bold' },
+                            3: { cellWidth: 90 }
+                        },
+                        margin: { left: 40, right: 40 }
+                    });
+                    currentY = doc.lastAutoTable.finalY + 20;
+                }
+
+                // Guardar
+                const nombreArchivo = `${limpiarNombreArchivo(nombre)}_${edad}_${obtenerFechaActual()}.pdf`;
+                doc.save(nombreArchivo);
+
+            } catch (error) {
+                console.error(error);
+                alert("Hubo un error al generar el PDF. Revisa la consola.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📄 Descargar reporte en PDF';
+            }
         }
     </script>
 </body>
