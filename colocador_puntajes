@@ -1,0 +1,118 @@
+import tkinter as tk
+from tkinter import simpledialog
+import json
+import os
+from PIL import Image, ImageTk
+
+# --- CONFIGURACIÓN ---
+print("\n=== MAPEADOR DE TOTALES POR RANGO DE EDAD ===")
+num_pag = input("👉 ¿En qué página están las tablas de edades? (Normalmente 7 u 8): ")
+
+IMAGEN_A_MAPEAR = f"images/pagina_{num_pag}.jpg"
+ARCHIVO_SALIDA = "templates/coordenadas_totales_edad.json"
+
+if not os.path.exists(IMAGEN_A_MAPEAR):
+    print(f"\n❌ Error: No se encontró {IMAGEN_A_MAPEAR}.")
+    exit()
+
+root = tk.Tk()
+root.title(f"Mapeador Totales por Edad - Página {num_pag}")
+
+# Cargar imagen generada
+img = Image.open(IMAGEN_A_MAPEAR)
+img_width, img_height = img.size
+
+# Reducimos visualmente
+escala_visual = 0.6 
+img_resized = img.resize((int(img_width * escala_visual), int(img_height * escala_visual)))
+img_tk = ImageTk.PhotoImage(img_resized)
+
+frame = tk.Frame(root)
+frame.pack(fill=tk.BOTH, expand=True)
+canvas = tk.Canvas(frame, width=img_tk.width(), height=700, scrollregion=(0, 0, img_tk.width(), img_tk.height()))
+vbar = tk.Scrollbar(frame, orient=tk.VERTICAL, command=canvas.yview)
+vbar.pack(side=tk.RIGHT, fill=tk.Y)
+canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+canvas.config(yscrollcommand=vbar.set)
+canvas.create_image(0, 0, anchor=tk.NW, image=img_tk)
+
+coordenadas_edad = {}
+historial_dibujos = []
+
+# Si ya hay archivo, lo cargamos
+if os.path.exists(ARCHIVO_SALIDA):
+    with open(ARCHIVO_SALIDA, "r", encoding="utf-8") as f:
+        coordenadas_edad = json.load(f)
+
+def on_click(event):
+    x = canvas.canvasx(event.x)
+    y = canvas.canvasy(event.y)
+
+    x_pct = (x / img_tk.width()) * 100
+    y_pct = (y / img_tk.height()) * 100
+
+    identificador = simpledialog.askstring(
+        "Identificador por Edad", 
+        "¿De qué rango y cuadrante es este cuadro?\n\nEjemplos (¡Usa este formato!):\n11_17_br\n18_64_bs\n65_mas_ss",
+        parent=root
+    )
+
+    if identificador:
+        identificador = identificador.strip().lower()
+        
+        if str(num_pag) not in coordenadas_edad:
+            coordenadas_edad[str(num_pag)] = {}
+            
+        coordenadas_edad[str(num_pag)][identificador] = {
+            "x_pct": round(x_pct, 3),
+            "y_pct": round(y_pct, 3)
+        }
+
+        # Texto morado para diferenciar de los otros
+        texto_id = canvas.create_text(x, y, text=identificador, fill="purple", font=("Arial", 10, "bold"))
+        circulo_id = canvas.create_oval(x-3, y-3, x+3, y+3, fill="purple", outline="purple")
+        
+        historial_dibujos.append({
+            "pag": str(num_pag),
+            "id": identificador, 
+            "dibujos": (texto_id, circulo_id)
+        })
+        print(f"✅ Registrado [{identificador}]")
+
+def deshacer(event):
+    if historial_dibujos:
+        ultimo = historial_dibujos.pop()
+        pag = ultimo["pag"]
+        identificador = ultimo["id"]
+        texto_id, circulo_id = ultimo["dibujos"]
+        
+        canvas.delete(texto_id)
+        canvas.delete(circulo_id)
+        
+        if pag in coordenadas_edad and identificador in coordenadas_edad[pag]:
+            del coordenadas_edad[pag][identificador]
+            
+        print(f"⏪ Borrado [{identificador}]")
+
+def guardar(event):
+    if not coordenadas_edad:
+        print("Error: No has mapeado nada aún.")
+        return
+        
+    with open(ARCHIVO_SALIDA, "w", encoding="utf-8") as f:
+        json.dump(coordenadas_edad, f, indent=4)
+        
+    print(f"\n🎉 ¡Guardado exitosamente en '{ARCHIVO_SALIDA}'!")
+    root.destroy()
+
+canvas.bind("<Button-1>", on_click)
+root.bind("z", deshacer)
+root.bind("<Return>", guardar)
+
+print("\n--- INSTRUCCIONES ---")
+print("1. Haz clic donde deba escribirse el número según la edad.")
+print("2. Escribe el rango y cuadrante (ej. 18_64_br).")
+print("3. Tecla 'Z' para deshacer.")
+print("4. Tecla 'Enter' para guardar y salir.\n")
+
+root.mainloop()

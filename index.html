@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil Sensorial - Evaluación TO</title>
+    
+    <style>
+        body {
+            background-color: #F3F4F6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 20px; padding-top: 100px; margin: 0;
+        }
+
+        /* BARRA SUPERIOR */
+        .barra-superior {
+            position: fixed; top: 0; left: 0; width: 100%;
+            background-color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex; justify-content: center; align-items: center;
+            padding: 15px 20px; z-index: 1000; gap: 20px;
+        }
+        .barra-superior label { font-size: 16px; font-weight: bold; color: #2c3e50; }
+        .barra-superior input {
+            font-size: 16px; padding: 8px 15px; border: 2px solid #D1D5DB;
+            border-radius: 8px; outline: none; transition: 0.2s;
+        }
+        .barra-superior input[type="text"] { width: 250px; }
+        .barra-superior input[type="number"] { width: 80px; text-align: center; }
+        .barra-superior input:focus { border-color: #FF71A4; }
+        
+        .btn-guardar {
+            padding: 12px 30px; font-size: 16px; font-weight: bold;
+            color: white; background-color: #FF71A4; border: none;
+            border-radius: 30px; cursor: pointer;
+            box-shadow: 0 4px 6px rgba(255, 113, 164, 0.3); transition: 0.2s;
+        }
+        .btn-guardar:hover { background-color: #E05B8D; transform: scale(1.05); }
+
+        /* DISEÑO DE LAS HOJAS */
+        .contenedor-hoja {
+            position: relative; margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 8px; background-color: white;
+            max-width: 900px; width: 100%;
+        }
+        .imagen-pdf { width: 100%; display: block; border-radius: 8px; }
+        .capa-interactiva { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        /* BOTONES E INTERFAZ */
+        input[type="radio"] {
+            appearance: none; -webkit-appearance: none;
+            width: 1.8vw; max-width: 22px; height: 1.8vw; max-height: 22px;
+            border: 2px solid #D1D5DB; border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.8);
+            cursor: pointer; position: absolute;
+            transform: translate(-50%, -50%); transition: all 0.2s ease; margin: 0;
+        }
+        input[type="radio"]:hover { background-color: #FCE7F3; }
+        input[type="radio"]:checked { border: 6px solid #FF71A4; background-color: white; }
+
+        .texto-resultado {
+            position: absolute; font-size: 1.6vw; font-weight: bold;
+            color: #2c3e50; transform: translate(-50%, -50%); pointer-events: none;
+        }
+        @media (min-width: 900px) { .texto-resultado { font-size: 16px; } }
+
+        .marco-resaltado {
+            position: absolute; border: 4px solid #FF71A4;
+            background-color: rgba(255, 113, 164, 0.1);
+            border-radius: 6px; pointer-events: none; box-sizing: border-box;
+        }
+
+        /* --- NUEVO: ESTILOS DEL REPORTE FINAL --- */
+        #seccion-reporte {
+            display: none; /* Oculto hasta que se calcule */
+            width: 100%; max-width: 900px; background: white;
+            padding: 40px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 8px; margin-top: 20px; box-sizing: border-box;
+        }
+        .titulo-reporte { color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 20px;}
+        .tabla-reporte { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; }
+        .tabla-reporte th, .tabla-reporte td { padding: 12px; text-align: left; border: 1px solid #ddd; }
+        .tabla-reporte td:first-child, .tabla-reporte td:nth-child(3) { text-align: center; font-weight: bold; }
+        
+        .bg-azul { background-color: #3498db; color: white; }
+        .bg-naranja { background-color: #e67e22; color: white; }
+        .bg-morado { background-color: #9b59b6; color: white; }
+        .bg-rojo { background-color: #e74c3c; color: white; }
+
+        .btn-imprimir {
+            display: block; width: 100%; padding: 15px; font-size: 18px;
+            background-color: #2c3e50; color: white; border: none; border-radius: 8px;
+            cursor: pointer; margin-top: 20px; font-weight: bold; transition: 0.2s;
+        }
+        .btn-imprimir:hover { background-color: #1a252f; }
+
+        /* Estilos para cuando Cami presione Ctrl+P (Imprimir PDF nativo) */
+        @media print {
+            .barra-superior, .btn-imprimir { display: none !important; }
+            body { padding: 0; background-color: white; }
+            .contenedor-hoja, #seccion-reporte { box-shadow: none; page-break-after: always; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="barra-superior">
+        <label>Paciente:</label>
+        <input type="text" id="nombre_paciente" placeholder="Nombre completo">
+        <label>Edad:</label>
+        <input type="number" id="edad_paciente" min="11" max="120" placeholder="Años">
+        <button class="btn-guardar" onclick="procesarResultados()">Calcular Perfil Completo</button>
+    </div>
+
+    <div id="documento-original">
+        <div class="contenedor-hoja"><img src="images/pagina_1.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_1"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_2.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_2"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_3.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_3"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_4.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_4"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_5.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_5"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_6.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_6"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_7.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_7"></div></div>
+        <div class="contenedor-hoja"><img src="images/pagina_8.jpg" class="imagen-pdf"><div class="capa-interactiva" id="capa_pag_8"></div></div>
+    </div>
+
+    <div id="seccion-reporte">
+        <h2 class="titulo-reporte">Reporte de Análisis Cuantitativo y Cualitativo</h2>
+        <p style="font-size: 16px;"><strong>Paciente:</strong> <span id="rep_nombre"></span> &nbsp;|&nbsp; <strong>Edad:</strong> <span id="rep_edad"></span> años</p>
+        <div id="contenido-tablas"></div>
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Guardar Reporte como PDF</button>
+    </div>
+
+    <script src="templates/coordenadas.js"></script>
+
+    <script>
+        const textoPreguntas = {
+            1: "Salgo o me corro a otro lugar cuando huelo olores en una tienda (por ejemplo, productos de baño, velas o perfumes).",
+            2: "Añado condimentos/especias a mi comida.",
+            3: "No huelo cosas que otras personas dicen que huelen.",
+            4: "Disfruto estar cerca de las personas que usan perfumes o lociones.",
+            5: "Sólo como alimentos conocidos/familiares.",
+            6: "Muchos alimentos no tienen sabor para mí (en otras palabras, no tienen mucho gusto o son insulsos).",
+            7: "No me gustan los sabores fuertes a menta o dulces (por ejemplo, picantes/canela o caramelos ácidos).",
+            8: "Voy a oler flores frescas cuando las veo.",
+            9: "Tengo miedo a las alturas.",
+            10: "Disfruto como me siento cuando me muevo (por ejemplo, bailando, corriendo).",
+            11: "Evito los ascensores y/o las escaleras mecánicas porque no me gusta el movimiento.",
+            12: "Tropiezo o me choco con las cosas.",
+            13: "No me gusta el movimiento del andar en auto.",
+            14: "Elijo participar en actividades físicas.",
+            15: "No me siento seguro cuando camino por escaleras (por ejemplo, me tropiezo, pierdo el equilibrio o /y necesito tomarme del pasamanos).",
+            16: "Me mareo fácilmente (por ejemplo, después de inclinarme, levantarme rápido).",
+            17: "Me gusta ir a lugares donde tienen luces brillantes y son coloridos.",
+            18: "Mantengo las cortinas bajas durante el día cuando estoy en casa.",
+            19: "Me gusta vestirme con ropa colorida.",
+            20: "Me siento frustrado cuando trato de encontrar algo en un cajón lleno de cosas o en un salón desordenado.",
+            21: "No encuentro la calle, el edificio o señales de un salón cuando voy a lugares nuevos.",
+            22: "Me molestan las imágenes visuales que se mueven rápido o son inestables en el cine o la TV.",
+            23: "No me doy cuenta cuando la gente entran en un lugar/sala.",
+            24: "Elijo hacer las compras en tiendas/almacenes pequeños porque me siento abrumado en tiendas grandes.",
+            25: "Me molesta cuando veo mucha gente alrededor mío (por ejemplo, en un shopping lleno, desfile, carnaval).",
+            26: "Limito las distracciones cuando trabajo (por ejemplo, cierro la puerta, o apago la TV).",
+            27: "Me desagrada rozarme la espalda.",
+            28: "Me gusta como se siente al cortarme el cabello.",
+            29: "Evito o uso guantes durante las actividades que pueden ensuciarme las manos.",
+            30: "Toco a otros cuando estoy hablando (por ejemplo, pongo mi mano en su hombro o le sostengo su mano).",
+            31: "Me molesta la sensación de mi boca cuando me despierto a la mañana.",
+            32: "Me gusta ir descalzo.",
+            33: "Estoy incómodo usando ciertos tejidos (por ejemplo, lana, seda, corderoy/pana, etiquetas en la ropa).",
+            34: "No me agradan ciertas texturas de comidas (por ejemplo, piel del durazno, jugo de manzana, queso cottage, manteca de maní gruesa).",
+            35: "Me alejo cuando otros se ponen muy cerca mío.",
+            36: "No noto cuando mis manos o cara están sucias.",
+            37: "Tengo rasguños o moretones, pero no recuerdo cómo me los hice.",
+            38: "Evito hacer filas o pararme cerca de otras personas porque no me gusta estar muy cerca de otros.",
+            39: "No noto cuando alguien toca mi brazo o mi espalda.",
+            40: "Trabajo en dos o más tareas al mismo tiempo.",
+            41: "Me toma más tiempo que a otras personas despertarme en las mañanas.",
+            42: "Hago cosas por impulso o en el momento (en otras palabras, hago cosas sin tener un plan en mente).",
+            43: "Encuentro tiempo para alejarme de mi ajetreada vida y pasar tiempo solo.",
+            44: "Parezco más lento que otros cuando intento hacer una actividad o una tarea.",
+            45: "No comprendo los chistes tan rápido como otros.",
+            46: "Me mantengo alejado de las muchedumbres.",
+            47: "Encuentro actividades para realizar en frente de otros (ej. música, deportes, actuación, hablar en público y responder preguntas en clase).",
+            48: "Me resulta difícil concentrarme durante todo el tiempo cuando estoy sentado en una clase o una reunión grande.",
+            49: "Evito situaciones donde pueden suceder cosas inesperadas (ej. Ir a lugares no conocidos o estar rodeada de gente que no conozco).",
+            50: "Tarareo, silbo, canto o hago ruidos.",
+            51: "Me sorprendo fácilmente con ruidos inesperados o fuertes (ej. aspiradora, ladridos de perros, llamadas telefónicas).",
+            52: "Tengo problemas para seguir lo que la gente está diciendo cuando hablan rápido o son temas poco conocidos para mí.",
+            53: "Salgo de espacios donde otros están mirando TV, o les pido que bajen el volumen.",
+            54: "Me distraigo si hay mucho ruido alrededor mío.",
+            55: "No me doy cuenta cuando llaman por mi nombre.",
+            56: "Uso estrategias para tapar el sonido (ej. cierro la puerta, tapo mis oídos, uso tapones para oídos).",
+            57: "Me mantengo alejada de lugares ruidosos.",
+            58: "Me gusta ir a eventos con mucha música.",
+            59: "Tengo que pedir a las personas que repitan las cosas.",
+            60: "Encuentro difícil trabajar con ruido de fondo (ej. ventilador, radio)."
+        };
+
+        const respuestasTexto = { 1: "Casi Nunca", 2: "Raramente", 3: "A veces", 4: "Frecuentemente", 5: "Casi Siempre" };
+
+        const coordsPagina6 = {
+            "3": { x: 20.4, y: 42.0 }, "6": { x: 20.4, y: 43.8 }, "12": { x: 20.4, y: 45.5 }, "15": { x: 20.4, y: 47.4 }, "21": { x: 20.4, y: 48.8 }, "23": { x: 20.4, y: 50.7 }, "36": { x: 20.4, y: 52.5 }, "37": { x: 20.4, y: 54.1 }, "39": { x: 20.4, y: 56.1 }, "41": { x: 20.4, y: 57.5 }, "44": { x: 20.4, y: 59.2 }, "45": { x: 20.4, y: 61.1 }, "52": { x: 20.4, y: 62.7 }, "55": { x: 20.4, y: 64.3 }, "59": { x: 20.4, y: 66.1 }, "total_br": { x: 20.4, y: 68.9 },
+            "2": { x: 43.6, y: 42.0 }, "4": { x: 43.6, y: 43.8 }, "8": { x: 43.6, y: 45.5 }, "10": { x: 43.6, y: 47.4 }, "14": { x: 43.6, y: 48.8 }, "17": { x: 43.6, y: 50.7 }, "19": { x: 43.6, y: 52.5 }, "28": { x: 43.6, y: 54.1 }, "30": { x: 43.6, y: 56.1 }, "32": { x: 43.6, y: 57.5 }, "40": { x: 43.6, y: 59.2 }, "42": { x: 43.6, y: 61.1 }, "47": { x: 43.6, y: 62.7 }, "50": { x: 43.6, y: 64.3 }, "58": { x: 43.6, y: 66.1 }, "total_bs": { x: 43.6, y: 68.9 },
+            "7": { x: 65.5, y: 42.0 }, "9": { x: 65.5, y: 43.8 }, "13": { x: 65.5, y: 45.5 }, "16": { x: 65.5, y: 47.4 }, "20": { x: 65.5, y: 48.8 }, "22": { x: 65.5, y: 50.7 }, "25": { x: 65.5, y: 52.5 }, "27": { x: 65.5, y: 54.1 }, "31": { x: 65.5, y: 56.1 }, "33": { x: 65.5, y: 57.5 }, "34": { x: 65.5, y: 59.2 }, "48": { x: 65.5, y: 61.1 }, "51": { x: 65.5, y: 62.7 }, "54": { x: 65.5, y: 64.3 }, "60": { x: 65.5, y: 66.1 }, "total_ss": { x: 65.5, y: 68.9 },
+            "1": { x: 87.5, y: 42.0 }, "5": { x: 87.5, y: 43.8 }, "11": { x: 87.5, y: 45.5 }, "18": { x: 87.5, y: 47.4 }, "24": { x: 87.5, y: 48.8 }, "26": { x: 87.5, y: 50.7 }, "29": { x: 87.5, y: 52.5 }, "35": { x: 87.5, y: 54.1 }, "38": { x: 87.5, y: 56.1 }, "43": { x: 87.5, y: 57.5 }, "46": { x: 87.5, y: 59.2 }, "49": { x: 87.5, y: 61.1 }, "53": { x: 87.5, y: 62.7 }, "56": { x: 87.5, y: 64.3 }, "57": { x: 87.5, y: 66.1 }, "total_evs": { x: 87.5, y: 68.9 }
+        };
+
+        const marcosEdad = {
+            "11_17":  { x: 4.3, y: 18.6, w: 91.5, h: 24.5 },
+            "18_64":  { x: 4.3, y: 43.8, w: 91.5, h: 24.5 },
+            "65_mas": { x: 4.3, y: 68.9, w: 91.5, h: 24.5 }
+        };
+
+        const totalesEdad = {
+            "11_17":  { br: {x: 26.3, y: 29.2}, bs: {x: 26.3, y: 33.1}, ss: {x: 26.3, y: 36.2}, evs: {x: 26.3, y: 39.3} },
+            "18_64":  { br: {x: 26.3, y: 56.3}, bs: {x: 26.3, y: 58.9}, ss: {x: 26.3, y: 61.8}, evs: {x: 26.3, y: 65.1} },
+            "65_mas": { br: {x: 26.3, y: 80.3}, bs: {x: 26.3, y: 82.8}, ss: {x: 26.3, y: 85.4}, evs: {x: 26.3, y: 89.0} }
+        };
+
+        const cuadrantes = {
+            "Bajo Registro": [3, 6, 12, 15, 21, 23, 36, 37, 39, 41, 44, 45, 52, 55, 59],
+            "Búsqueda Sensorial": [2, 4, 8, 10, 14, 17, 19, 28, 30, 32, 40, 42, 47, 50, 58],
+            "Sensibilidad Sensorial": [7, 9, 13, 16, 20, 22, 25, 27, 31, 33, 34, 48, 51, 54, 60],
+            "Evitación Sensorial": [1, 5, 11, 18, 24, 26, 29, 35, 38, 43, 46, 49, 53, 56, 57]
+        };
+
+        // INYECTAR BOTONES DE SELECCIÓN
+        if (typeof coordenadasGlobales !== 'undefined') {
+            for (const [pag_id, datosPagina] of Object.entries(coordenadasGlobales)) {
+                const capa = document.getElementById(pag_id);
+                if (!capa) continue;
+                for (const [casilla, puntos] of Object.entries(datosPagina)) {
+                    puntos.forEach((coord, index) => {
+                        const radioBtn = document.createElement('input');
+                        radioBtn.type = 'radio'; radioBtn.name = casilla; radioBtn.value = index + 1;
+                        radioBtn.style.left = coord[0] + '%'; radioBtn.style.top = coord[1] + '%';
+                        capa.appendChild(radioBtn);
+                    });
+                }
+            }
+        }
+
+        function procesarResultados() {
+            const nombre = document.getElementById('nombre_paciente').value || "Paciente Anónimo";
+            const edadInput = document.getElementById('edad_paciente').value;
+            
+            if (!edadInput || isNaN(edadInput)) {
+                alert("Por favor, ingresa la edad del paciente en la barra superior antes de calcular.");
+                return;
+            }
+            
+            const edad = parseInt(edadInput);
+            let rangoActivo = "";
+            if (edad >= 11 && edad <= 17) rangoActivo = "11_17";
+            else if (edad >= 18 && edad <= 64) rangoActivo = "18_64";
+            else if (edad >= 65) rangoActivo = "65_mas";
+            else { alert("La edad ingresada está fuera de los rangos (11 a 65+)."); return; }
+
+            const resultados = {};
+            document.querySelectorAll('input[type="radio"]:checked').forEach(input => {
+                const numItem = input.name.replace('casilla_', '');
+                resultados[numItem] = parseInt(input.value);
+            });
+
+            // 1. ACTUALIZAR LAS IMÁGENES (PAG 6 y 7)
+            const capaPag6 = document.getElementById('capa_pag_6');
+            const capaPag7 = document.getElementById('capa_pag_7');
+            if(capaPag6 && capaPag7) {
+                capaPag6.querySelectorAll('.texto-resultado').forEach(t => t.remove());
+                capaPag7.querySelectorAll('.texto-resultado, .marco-resaltado').forEach(el => el.remove());
+
+                const totalesCalc = { "total_br": "", "total_bs": "", "total_ss": "", "total_evs": "" };
+
+                for (const [id_texto, coords] of Object.entries(coordsPagina6)) {
+                    let valor = "";
+                    if (!isNaN(id_texto)) {
+                        valor = resultados[id_texto] !== undefined ? resultados[id_texto] : "";
+                    } else {
+                        let mapId = id_texto === "total_br" ? "Bajo Registro" : 
+                                    id_texto === "total_bs" ? "Búsqueda Sensorial" : 
+                                    id_texto === "total_ss" ? "Sensibilidad Sensorial" : "Evitación Sensorial";
+                        let sumaTotal = 0; let respondidos = 0;
+                        cuadrantes[mapId].forEach(item => {
+                            if (resultados[item]) { sumaTotal += resultados[item]; respondidos++; }
+                        });
+                        valor = respondidos > 0 ? sumaTotal : "";
+                        totalesCalc[id_texto] = valor;
+                    }
+
+                    if (valor !== "") {
+                        const spanObj = document.createElement('span');
+                        spanObj.className = 'texto-resultado'; spanObj.textContent = valor;
+                        spanObj.style.left = coords.x + '%'; spanObj.style.top = coords.y + '%';
+                        capaPag6.appendChild(spanObj);
+                    }
+                }
+
+                const m = marcosEdad[rangoActivo];
+                const divMarco = document.createElement('div');
+                divMarco.className = 'marco-resaltado';
+                divMarco.style.left = m.x + '%'; divMarco.style.top = m.y + '%';
+                divMarco.style.width = m.w + '%'; divMarco.style.height = m.h + '%';
+                capaPag7.appendChild(divMarco);
+
+                const pt = totalesEdad[rangoActivo];
+                const mapeo = { "br": "total_br", "bs": "total_bs", "ss": "total_ss", "evs": "total_evs" };
+                for (const [cuad, c] of Object.entries(pt)) {
+                    if (totalesCalc[mapeo[cuad]] !== "") {
+                        const spanObj = document.createElement('span');
+                        spanObj.className = 'texto-resultado'; spanObj.textContent = totalesCalc[mapeo[cuad]];
+                        spanObj.style.left = c.x + '%'; spanObj.style.top = c.y + '%';
+                        capaPag7.appendChild(spanObj);
+                    }
+                }
+            }
+
+            // 2. GENERAR EL REPORTE HTML AL FINAL DE LA PÁGINA
+            document.getElementById('rep_nombre').textContent = nombre;
+            document.getElementById('rep_edad').textContent = edad;
+            
+            const contenedorTablas = document.getElementById('contenido-tablas');
+            contenedorTablas.innerHTML = ''; // Limpiar reportes anteriores
+
+            const estilosCuadrantes = {
+                "Bajo Registro": "bg-azul",
+                "Búsqueda Sensorial": "bg-naranja",
+                "Sensibilidad Sensorial": "bg-morado",
+                "Evitación Sensorial": "bg-rojo"
+            };
+
+            for (const [nombreCuadrante, items] of Object.entries(cuadrantes)) {
+                let htmlTabla = `
+                    <table class="tabla-reporte">
+                        <thead>
+                            <tr>
+                                <th class="${estilosCuadrantes[nombreCuadrante]}" style="width:10%; text-align:center;">Ítem</th>
+                                <th class="${estilosCuadrantes[nombreCuadrante]}" style="width:60%;">ción de la Conducta</th>
+                                <th class="${estilosCuadrantes[nombreCuadrante]}" style="width:10%; text-align:center;">Ptje</th>
+                                <th class="${estilosCuadrantes[nombreCuadrante]}" style="width:20%;">Respuesta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                items.forEach(item => {
+                    const puntaje = resultados[item] ? resultados[item] : "-";
+                    const textoRespuesta = resultados[item] ? respuestasTexto[resultados[item]] : "Sin responder";
+                    const pregunta = textoPreguntas[item] || "(Pregunta no ingresada)";
+                    
+                    htmlTabla += `
+                        <tr>
+                            <td>${item}</td>
+                            <td>${pregunta}</td>
+                            <td>${puntaje}</td>
+                            <td>${textoRespuesta}</td>
+                        </tr>
+                    `;
+                });
+
+                htmlTabla += `</tbody></table>`;
+                contenedorTablas.innerHTML += htmlTabla;
+            }
+
+            // Mostrar la sección y hacer scroll hacia abajo automáticamente
+            const seccionReporte = document.getElementById('seccion-reporte');
+            seccionReporte.style.display = 'block';
+            
+            setTimeout(() => {
+                seccionReporte.scrollIntoView({ behavior: 'smooth' });
+            }, 300);
+            
+            // Cambiar dinámicamente el título de la página web para que al imprimir guarde con ese nombre por defecto
+            let nombreLimpio = nombre.trim().replace(/\s+/g, '_');
+            document.title = `${nombreLimpio}_${edad}`;
+        }
+    </script>
+</body>
+</html>
